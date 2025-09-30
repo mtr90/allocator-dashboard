@@ -688,7 +688,6 @@ const App = () => {
                 handleCloseContextMenu();
             }}
            />
-        </div>
         </>
       );
 };
