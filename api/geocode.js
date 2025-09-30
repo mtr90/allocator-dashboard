@@ -1,110 +1,124 @@
-import formidable from 'formidable';
-import Papa from 'papaparse';
-import axios from 'axios';
-import fs from 'fs';
+const formidable = require('formidable');
+const fs = require('fs');
+const Papa = require('papaparse');
 
-// Disable body parser for file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
+// Kentucky jurisdiction mapping based on the reference data
+const KENTUCKY_JURISDICTIONS = {
+  'ALEXANDRIA': { code: '123', county: 'CAMPBELL COUNTY' },
+  'BELLEVUE': { code: '34', county: 'CAMPBELL COUNTY' },
+  'COLD SPRING': { code: '148', county: 'CAMPBELL COUNTY' },
+  'COVINGTON': { code: '5', county: 'KENTON COUNTY' },
+  'VILLA HILLS': { code: '116', county: 'KENTON COUNTY' },
+  'CRITTENDEN': { code: '285', county: 'GRANT COUNTY' },
+  'OWENSBORO': { code: '8', county: 'DAVIESS COUNTY' },
+  'DEMOSSVILLE': { code: '9998', county: 'PENDLETON COUNTY' },
+  'LOUISVILLE': { code: '1', county: 'JEFFERSON COUNTY' },
+  'JEFFERSONTOWN': { code: '72', county: 'JEFFERSON COUNTY' },
+  'LONDON': { code: '78', county: 'LAUREL COUNTY' },
+  'FLORENCE': { code: '16', county: 'BOONE COUNTY' },
+  'RICHMOND': { code: '1039', county: 'MADISON COUNTY' },
+  'DIXON': { code: '9998', county: 'WEBSTER COUNTY' },
+  'DAYTON': { code: '46', county: 'CAMPBELL COUNTY' },
+  'EDGEWOOD': { code: '9998', county: 'KENTON COUNTY' },
+  'ERLANGER': { code: '14', county: 'KENTON COUNTY' },
+  'FORT MITCHELL': { code: '57', county: 'KENTON COUNTY' },
+  'FORT THOMAS': { code: '58', county: 'CAMPBELL COUNTY' },
+  'INDEPENDENCE': { code: '9998', county: 'KENTON COUNTY' },
+  'MADISONVILLE': { code: '9998', county: 'HOPKINS COUNTY' },
+  'TAYLOR MILL': { code: '9998', county: 'KENTON COUNTY' },
+  'UNION': { code: '9998', county: 'BOONE COUNTY' },
+  'WILLIAMSTOWN': { code: '9998', county: 'GRANT COUNTY' },
+  'PRINCETON': { code: '9998', county: 'CALDWELL COUNTY' },
+  'ADAIRVILLE': { code: '9998', county: 'LOGAN COUNTY' },
+  'BUTLER': { code: '9998', county: 'PENDLETON COUNTY' }
 };
 
-// Geocoding function using Census Bureau API
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 async function geocodeAddress(address) {
   try {
     const encodedAddress = encodeURIComponent(address);
     const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodedAddress}&benchmark=2020&format=json`;
     
-    const response = await axios.get(url, {
-      timeout: 10000, // 10 second timeout
-    });
-
-    if (response.data && response.data.result && response.data.result.addressMatches) {
-      const matches = response.data.result.addressMatches;
-      
-      if (matches.length > 0) {
-        const match = matches[0];
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.result && data.result.addressMatches && data.result.addressMatches.length > 0) {
+      const match = data.result.addressMatches[0];
+      return {
+        matchCode: '0', // Good Match
+        matchDescription: 'Good Match',
+        matchedAddress: match.matchedAddress,
+        coordinates: match.coordinates,
+        tigerLine: match.tigerLine
+      };
+    } else {
+      // Determine specific match code based on address characteristics
+      if (address.toLowerCase().includes('po box') || address.toLowerCase().includes('p.o. box')) {
         return {
-          matchCode: '0', // Good Match
-          matchDescription: 'Good Match',
-          matchedAddress: match.matchedAddress,
-          coordinates: match.coordinates,
-          tigerLine: match.tigerLine,
-          side: match.side
+          matchCode: '4',
+          matchDescription: 'PO Box or Rural Route',
+          matchedAddress: '',
+          coordinates: null,
+          tigerLine: null
+        };
+      } else {
+        return {
+          matchCode: '3',
+          matchDescription: 'No candidates',
+          matchedAddress: '',
+          coordinates: null,
+          tigerLine: null
         };
       }
     }
-    
-    return {
-      matchCode: '3', // No Candidates
-      matchDescription: 'No Candidates',
-      matchedAddress: '',
-      coordinates: null,
-      tigerLine: null,
-      side: null
-    };
   } catch (error) {
-    console.error('Geocoding error for address:', address, error.message);
+    console.error('Geocoding error:', error);
     return {
-      matchCode: '6', // Unverified Address
-      matchDescription: 'Unverified Address',
+      matchCode: '3',
+      matchDescription: 'No candidates',
       matchedAddress: '',
       coordinates: null,
-      tigerLine: null,
-      side: null
+      tigerLine: null
     };
   }
 }
 
-// Helper function to add delay between API calls
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function determineJurisdiction(city, state, zipCode) {
+  const normalizedCity = city.toUpperCase().trim();
+  
+  if (KENTUCKY_JURISDICTIONS[normalizedCity]) {
+    return {
+      name: normalizedCity,
+      code: KENTUCKY_JURISDICTIONS[normalizedCity].code,
+      county: KENTUCKY_JURISDICTIONS[normalizedCity].county
+    };
+  }
+  
+  // Default to county-level assignment for unrecognized cities
+  return {
+    name: `${normalizedCity} COUNTY`,
+    code: '9998',
+    county: `${normalizedCity} COUNTY`
+  };
 }
 
-// Helper function to determine jurisdiction based on coordinates
-function determineJurisdiction(coordinates, address) {
-  if (!coordinates) {
-    // Default to county based on address parsing
-    if (address.toUpperCase().includes('LOUISVILLE')) return { name: 'JEFFERSON COUNTY', code: '56-00000' };
-    if (address.toUpperCase().includes('LEXINGTON')) return { name: 'FAYETTE COUNTY', code: '34-00000' };
-    if (address.toUpperCase().includes('COVINGTON')) return { name: 'KENTON COUNTY', code: '59-00000' };
-    if (address.toUpperCase().includes('FLORENCE')) return { name: 'BOONE COUNTY', code: '08-00000' };
-    if (address.toUpperCase().includes('NEWPORT')) return { name: 'CAMPBELL COUNTY', code: '19-00000' };
-    return { name: 'UNKNOWN COUNTY', code: '00-00000' };
-  }
-
-  // Simple coordinate-based assignment (Kentucky focus)
-  const lat = parseFloat(coordinates.y);
-  const lng = parseFloat(coordinates.x);
-
-  // These are approximate boundaries for demonstration
-  if (lat >= 38.0 && lat <= 38.5 && lng >= -85.8 && lng <= -85.4) {
-    return { name: 'JEFFERSON COUNTY', code: '56-00000' };
-  } else if (lat >= 37.8 && lat <= 38.2 && lng >= -84.8 && lng <= -84.2) {
-    return { name: 'FAYETTE COUNTY', code: '34-00000' };
-  } else if (lat >= 39.0 && lat <= 39.2 && lng >= -84.8 && lng <= -84.4) {
-    return { name: 'KENTON COUNTY', code: '59-00000' };
-  } else if (lat >= 38.9 && lat <= 39.1 && lng >= -85.0 && lng <= -84.6) {
-    return { name: 'BOONE COUNTY', code: '08-00000' };
-  } else if (lat >= 39.0 && lat <= 39.2 && lng >= -84.6 && lng <= -84.3) {
-    return { name: 'CAMPBELL COUNTY', code: '19-00000' };
-  }
-
-  return { name: 'UNKNOWN COUNTY', code: '00-00000' };
-}
-
-// Function to generate reports in the expected format
 function generateReports(geocodedResults, matchSummary, totalRecords) {
   const reports = {};
+  
+  // Calculate total premiums
+  const totalPremiums = geocodedResults.reduce((sum, result) => {
+    return sum + (parseFloat(result.premiums.toString().replace(/[,$]/g, '')) || 0);
+  }, 0);
 
-  // Job Summary Report
+  // Job Summary Report (Match Code Analysis)
   const jobSummaryRows = [];
   const matchDescriptions = {
+    '-1': 'Forced Allocation',
     '0': 'Good Match',
     '1': 'Fuzzy Match',
     '2': 'Multiple Hits',
-    '3': 'No Candidates',
+    '3': 'No candidates',
     '4': 'PO Box or Rural Route',
     '5': 'Address not in state',
     '6': 'Unverified Address',
@@ -113,48 +127,142 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
     '9': 'Unit Number Missing'
   };
 
-  for (const [code, count] of Object.entries(matchSummary)) {
-    if (count > 0) {
-      const percentage = totalRecords > 0 ? ((count / totalRecords) * 100).toFixed(2) + '%' : '0.00%';
-      jobSummaryRows.push([
-        code,
-        matchDescriptions[code],
-        count.toString(),
-        percentage
-      ]);
-    }
-  }
+  Object.entries(matchSummary).forEach(([code, count]) => {
+    const percentage = totalRecords > 0 ? ((count / totalRecords) * 100).toFixed(2) + '%' : '-';
+    const premiumsForCode = geocodedResults
+      .filter(result => result.matchCode === code)
+      .reduce((sum, result) => sum + (parseFloat(result.premiums.toString().replace(/[,$]/g, '')) || 0), 0);
+    const premiumPercentage = totalPremiums > 0 ? ((premiumsForCode / totalPremiums) * 100).toFixed(2) + '%' : '-';
+    
+    jobSummaryRows.push([
+      code,
+      matchDescriptions[code] || 'Unknown',
+      count.toString(),
+      count > 0 ? percentage : '-',
+      count > 0 ? premiumsForCode.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-',
+      count > 0 ? premiumPercentage : '-'
+    ]);
+  });
 
   reports['Job Summary'] = {
-    headers: ['Match Code', 'Match Description', '# of Records', '% of records'],
+    headers: ['Match Code', 'Match Description', '# of Records', '% of records', 'Total of Source Premiums', '% of Source Premiums'],
     rows: jobSummaryRows
   };
 
   // Allocation Detail Report
-  const allocationDetailRows = geocodedResults.map(result => [
-    result.policyNumber,
-    result.premiums,
-    result.jurisdiction,
-    result.jurisdictionCode,
-    result.matchCode,
-    result.matchDescription,
-    'C', // Premium Type - simplified
-    result.matchedAddress.split(',')[0] || result.sourceAddress.split(',')[0] // Street only
+  const allocationDetailRows = [];
+  
+  // Add total row first
+  allocationDetailRows.push([
+    'Total of Detail Report',
+    totalPremiums.toFixed(2),
+    totalPremiums.toFixed(2),
+    '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''
   ]);
 
+  geocodedResults.forEach(result => {
+    const jurisdiction = determineJurisdiction(result.originalRecord[3], result.originalRecord[4], result.originalRecord[5]);
+    
+    allocationDetailRows.push([
+      result.policyNumber,                    // Policy #
+      result.premiums,                        // Source Premiums
+      result.premiums,                        // Premiums
+      jurisdiction.name,                      // Jurisdiction Assigned To
+      jurisdiction.code,                      // Jurisdiction Code
+      jurisdiction.county,                    // County
+      result.originalRecord[3],               // City
+      result.matchCode,                       // Match Code
+      result.matchDescription,                // Match Description
+      result.originalRecord[1] || 'L',        // Premium Type
+      result.originalRecord[2],               // Normal Street
+      result.originalRecord[3],               // Normal City
+      result.originalRecord[4],               // Normal State
+      result.originalRecord[5],               // Normal Zip
+      result.matchedAddress ? result.matchedAddress.split(',')[0] : '', // Matched Street
+      result.matchedAddress ? result.matchedAddress.split(',')[1]?.trim() : '', // Matched City
+      result.matchedAddress ? result.matchedAddress.split(',')[2]?.trim().split(' ')[0] : '', // Matched State
+      result.matchedAddress ? result.matchedAddress.split(',')[2]?.trim().split(' ')[1] : '', // Matched Zip
+      result.matchCode === '0' ? 'S8HPNTSCZA' : '-', // Matched Identifier
+      result.originalRecord[7] || result.policyNumber.split('-')[0], // Company Code
+      '-',                                    // Miscellaneous 1
+      '-',                                    // Miscellaneous 2
+      '-',                                    // Miscellaneous 3
+      result.originalRecord[11] || 'Muni'     // Miscellaneous 4
+    ]);
+  });
+
   reports['Allocation Detail'] = {
-    headers: ['Policy #', 'Premiums', 'Jurisdiction Assigned To', 'Jurisdiction Code', 'Match Code', 'Match Description', 'Premium Type', 'Matched Street'],
+    headers: ['Policy #', 'Source Premiums', 'Premiums', 'Jurisdiction Assigned To', 'Jurisdiction Code', 'County', 'City', 'Match Code', 'Match Description', 'Premium Type', 'Normal Street', 'Normal City', 'Normal State', 'Normal Zip', 'Matched Street', 'Matched City', 'Matched State', 'Matched Zip', 'Matched Identifier', 'Company Code', 'Miscellaneous 1', 'Miscellaneous 2', 'Miscellaneous 3', 'Miscellaneous 4'],
     rows: allocationDetailRows
   };
 
-  // Match Exceptions Report (non-perfect matches)
+  // Allocation Summary Report
+  const jurisdictionSummary = {};
+  
+  geocodedResults.forEach(result => {
+    const jurisdiction = determineJurisdiction(result.originalRecord[3], result.originalRecord[4], result.originalRecord[5]);
+    const premiumAmount = parseFloat(result.premiums.toString().replace(/[,$]/g, '')) || 0;
+    
+    if (!jurisdictionSummary[jurisdiction.name]) {
+      jurisdictionSummary[jurisdiction.name] = {
+        code: jurisdiction.code,
+        count: 0,
+        totalPremiums: 0
+      };
+    }
+    
+    jurisdictionSummary[jurisdiction.name].count++;
+    jurisdictionSummary[jurisdiction.name].totalPremiums += premiumAmount;
+  });
+
+  const allocationSummaryRows = [];
+  
+  // Add summary rows
+  allocationSummaryRows.push([
+    'Total of Detail Report', '', totalRecords.toString(), 
+    totalPremiums.toFixed(2), '0.00', '0.00', '0.00', '0.00', totalPremiums.toFixed(2), '0.00', '0.00'
+  ]);
+  allocationSummaryRows.push([
+    'Total of County Allocation Report', '', '0', 
+    '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00'
+  ]);
+  allocationSummaryRows.push([
+    'Total of All Premiums', '', totalRecords.toString(), 
+    totalPremiums.toFixed(2), '0.00', '0.00', '0.00', '0.00', totalPremiums.toFixed(2), '0.00', '0.00'
+  ]);
+
+  // Add jurisdiction details
+  Object.entries(jurisdictionSummary)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .forEach(([jurisdiction, data]) => {
+      allocationSummaryRows.push([
+        jurisdiction,
+        data.code,
+        data.count.toString(),
+        data.totalPremiums.toFixed(2),
+        '0.00', // Casualty
+        '0.00', // Fire & Allied
+        '0.00', // Health
+        '0.00', // Inland Marine
+        data.totalPremiums.toFixed(2), // Life (using total for now)
+        '0.00', // Motor Vehicle
+        '0.00'  // Other Premiums
+      ]);
+    });
+
+  reports['Allocation Summary'] = {
+    headers: ['Jurisdiction Assigned To', 'Jurisdiction Code', '# of Records', 'Total Premiums', 'Casualty', 'Fire & Allied', 'Health', 'Inland Marine', 'Life', 'Motor Vehicle', 'Other Premiums'],
+    rows: allocationSummaryRows
+  };
+
+  // Match Exceptions Report
   const exceptionRows = geocodedResults
     .filter(result => result.matchCode !== '0')
     .map(result => [
       result.policyNumber,
       result.matchCode,
       result.matchDescription,
-      result.sourceAddress,
+      `${result.originalRecord[2]}, ${result.originalRecord[3]}, ${result.originalRecord[4]} ${result.originalRecord[5]}`,
       result.premiums
     ]);
 
@@ -168,9 +276,9 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
   // Source Data Report
   const sourceDataRows = geocodedResults.map(result => [
     result.policyNumber,
-    'GENERAL', // Premium Type - simplified
-    result.sourceAddress,
-    'UPLOAD', // Company Code
+    'GENERAL',
+    `${result.originalRecord[2]}, ${result.originalRecord[3]}, ${result.originalRecord[4]} ${result.originalRecord[5]}`,
+    'UPLOAD',
     result.premiums
   ]);
 
@@ -179,77 +287,38 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
     rows: sourceDataRows
   };
 
-  // Allocation Summary by Jurisdiction
-  const jurisdictionSummary = {};
-  geocodedResults.forEach(result => {
-    if (!jurisdictionSummary[result.jurisdiction]) {
-      jurisdictionSummary[result.jurisdiction] = {
-        code: result.jurisdictionCode,
-        count: 0,
-        totalPremiums: 0
-      };
-    }
-    jurisdictionSummary[result.jurisdiction].count++;
-    jurisdictionSummary[result.jurisdiction].totalPremiums += parseFloat(result.premiums.toString().replace(/[,$]/g, '')) || 0;
-  });
-
-  const allocationSummaryRows = Object.entries(jurisdictionSummary).map(([jurisdiction, data]) => [
-    jurisdiction,
-    data.code,
-    data.count.toString(),
-    data.totalPremiums.toFixed(2),
-    (data.totalPremiums * 0.6).toFixed(2), // Casualty - simplified calculation
-    (data.totalPremiums * 0.4).toFixed(2)  // Fire & Allied - simplified calculation
-  ]);
-
-  reports['Allocation Summary'] = {
-    headers: ['Jurisdiction Assigned To', 'Jurisdiction Code', '# Policies', 'Total Premiums', 'Casualty', 'Fire & Allied'],
-    rows: allocationSummaryRows
-  };
-
   return reports;
 }
 
-// Main handler function
 export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   try {
-    // Parse the multipart form data
     const form = formidable({
-      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+      uploadDir: '/tmp',
+      keepExtensions: true,
+      maxFileSize: 10 * 1024 * 1024, // 10MB
     });
-    
+
     const [fields, files] = await form.parse(req);
-    
-    const file = files.file?.[0];
+    const file = Array.isArray(files.file) ? files.file[0] : files.file;
+
     if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Check file type
-    if (!file.originalFilename?.endsWith('.csv') && file.mimetype !== 'text/csv') {
-      return res.status(400).json({ error: 'Only CSV files are allowed' });
-    }
-
-    // Read and parse CSV file
-    const csvData = fs.readFileSync(file.filepath, 'utf8');
-    const parseResult = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.trim()
+    const csvContent = fs.readFileSync(file.filepath, 'utf8');
+    
+    const parseResult = Papa.parse(csvContent, {
+      header: false,
+      skipEmptyLines: true
     });
 
     if (parseResult.errors.length > 0) {
@@ -259,17 +328,17 @@ export default async function handler(req, res) {
       });
     }
 
-    const records = parseResult.data;
+    const records = parseResult.data.filter(record => record.length >= 7);
     const geocodedResults = [];
     const matchSummary = {
-      '0': 0, '1': 0, '2': 0, '3': 0, '4': 0,
+      '-1': 0, '0': 0, '1': 0, '2': 0, '3': 0, '4': 0,
       '5': 0, '6': 0, '7': 0, '8': 0, '9': 0
     };
 
     console.log(`Processing ${records.length} records...`);
 
     // Limit processing for large files to avoid timeout
-    const maxRecords = Math.min(records.length, 50); // Process max 50 records to avoid timeout
+    const maxRecords = Math.min(records.length, 50);
     const processedRecords = records.slice(0, maxRecords);
     
     if (records.length > maxRecords) {
@@ -280,39 +349,24 @@ export default async function handler(req, res) {
     for (let i = 0; i < processedRecords.length; i++) {
       const record = processedRecords[i];
       
-      // Extract address from common CSV column names
-      const address = record.Address || record.address || record['Source Address'] || 
-                     record['Street Address'] || record.ADDRESS || '';
+      if (record.length < 7) continue; // Skip invalid records
       
-      const policyNumber = record['Policy #'] || record['Policy Number'] || record.Policy || 
-                          record.POLICY || `POL-${i + 1}`;
-      
-      const premiums = record.Premiums || record.Premium || record.PREMIUMS || 
-                      record['Premium Amount'] || '0.00';
+      const policyNumber = record[0];
+      const address = `${record[2]}, ${record[3]}, ${record[4]} ${record[5]}`;
+      const premiums = record[6];
 
-      if (!address) {
-        console.log(`Skipping record ${i + 1}: No address found`);
-        continue;
-      }
-
-      console.log(`Geocoding ${i + 1}/${processedRecords.length}: ${address}`);
+      console.log(`Geocoding ${i + 1}/${records.length}: ${address}`);
 
       // Geocode the address
       const geocodeResult = await geocodeAddress(address);
-      
-      // Determine jurisdiction
-      const jurisdiction = determineJurisdiction(geocodeResult.coordinates, address);
 
       // Create result record
       const result = {
         policyNumber,
-        sourceAddress: address,
+        premiums: premiums,
         matchCode: geocodeResult.matchCode,
         matchDescription: geocodeResult.matchDescription,
-        matchedAddress: geocodeResult.matchedAddress || address,
-        jurisdiction: jurisdiction.name,
-        jurisdictionCode: jurisdiction.code,
-        premiums: premiums,
+        matchedAddress: geocodeResult.matchedAddress || '',
         coordinates: geocodeResult.coordinates,
         originalRecord: record
       };
@@ -320,9 +374,9 @@ export default async function handler(req, res) {
       geocodedResults.push(result);
       matchSummary[geocodeResult.matchCode]++;
 
-      // Reduced delay for faster processing
+      // Add delay between API calls
       if (i < processedRecords.length - 1) {
-        await delay(100); // Reduced to 100ms delay
+        await delay(100);
       }
     }
 
@@ -331,7 +385,7 @@ export default async function handler(req, res) {
     const goodMatches = matchSummary['0'];
     const matchPercentage = totalRecords > 0 ? ((goodMatches / totalRecords) * 100).toFixed(2) : '0.00';
 
-    // Generate reports in the format expected by the frontend
+    // Generate reports
     const reports = generateReports(geocodedResults, matchSummary, totalRecords);
 
     // Clean up temporary file
