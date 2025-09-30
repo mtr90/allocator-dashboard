@@ -829,7 +829,7 @@ const App = () => {
                     <p style={{ fontSize: '11px', color: '#6c757d' }}>Copyright © 2023 TriTech Software. All rights reserved. This firm is not a CPA firm.</p>
                 </footer>
             </div>
-          </div>
+        </div>
            <ContextMenu
             visible={contextMenu.visible}
             x={contextMenu.x}
