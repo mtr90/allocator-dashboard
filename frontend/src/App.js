@@ -737,31 +737,49 @@ const App = () => {
 
                         {/* Table */}
                         <div style={{ overflow: 'auto', flex: 1, minHeight: '500px' }}>
-                            <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', color: COLORS.textDark, tableLayout: 'fixed' }}>
+                            <table style={{ 
+                                width: 'max-content', 
+                                minWidth: currentReportData.headers.length > 10 ? '2400px' : '1200px',
+                                borderCollapse: 'collapse', 
+                                color: COLORS.textDark, 
+                                tableLayout: 'auto' 
+                            }}>
                                 <thead style={{ backgroundColor: COLORS.tableHeaderBg, position: 'sticky', top: 0, zIndex: 1 }}>
                                     <tr>
-                                        {currentReportData.headers.map((header, idx) => (
-                                        <th key={idx} onClick={() => handleSort(header)} style={{ 
-                                            padding: '10px 8px', 
-                                            textAlign: 'left', 
-                                            fontSize: '11px', 
-                                            fontWeight: '600', 
-                                            color: '#495057', 
-                                            textTransform: 'uppercase', 
-                                            letterSpacing: '0.05em', 
-                                            cursor: 'pointer', 
-                                            userSelect: 'none', 
-                                            borderBottom: '2px solid #dee2e6', 
-                                            width: `${100 / currentReportData.headers.length}%`,
-                                            minWidth: '80px',
-                                            maxWidth: '150px',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            {header} {sortColumn === header && (sortDirection === 'asc' ? '↑' : '↓')}
-                                        </th>
-                                        ))}
+                                        {currentReportData.headers.map((header, idx) => {
+                                            // Set appropriate width based on column content
+                                            let columnWidth = '120px';
+                                            if (header.includes('Policy') || header.includes('Address') || header.includes('Street')) {
+                                                columnWidth = '150px';
+                                            } else if (header.includes('Description') || header.includes('Matched')) {
+                                                columnWidth = '180px';
+                                            } else if (header.includes('Code') || header.includes('State') || header.includes('Zip')) {
+                                                columnWidth = '80px';
+                                            } else if (header.includes('Premium') || header.includes('Total')) {
+                                                columnWidth = '100px';
+                                            }
+                                            
+                                            return (
+                                            <th key={idx} onClick={() => handleSort(header)} style={{ 
+                                                padding: '8px 12px', 
+                                                textAlign: 'left', 
+                                                fontSize: '10px', 
+                                                fontWeight: '600', 
+                                                color: '#495057', 
+                                                textTransform: 'uppercase', 
+                                                letterSpacing: '0.05em', 
+                                                cursor: 'pointer', 
+                                                userSelect: 'none', 
+                                                borderBottom: '2px solid #dee2e6', 
+                                                width: columnWidth,
+                                                minWidth: columnWidth,
+                                                whiteSpace: 'nowrap',
+                                                backgroundColor: COLORS.tableHeaderBg
+                                            }}>
+                                                <span title={header}>{header}</span> {sortColumn === header && (sortDirection === 'asc' ? '↑' : '↓')}
+                                            </th>
+                                            );
+                                        })}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -774,18 +792,34 @@ const App = () => {
                                     )}
                                     {paginatedData.map((row, rowIdx) => (
                                     <tr key={rowIdx} onClick={() => setSelectedRow(rowIdx)} style={{ borderBottom: `1px solid ${COLORS.mainBg}`, backgroundColor: selectedRow === rowIdx ? '#e9ecef' : 'transparent', cursor: 'pointer' }}>
-                                        {row.map((cell, cellIdx) => (
-                                        <td key={cellIdx} style={{ 
-                                            padding: '10px 8px', 
-                                            fontSize: '13px', 
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap',
-                                            maxWidth: '150px'
-                                        }}>
-                                            <span title={cell}>{cell}</span>
-                                        </td>
-                                        ))}
+                                        {row.map((cell, cellIdx) => {
+                                            const header = currentReportData.headers[cellIdx];
+                                            let columnWidth = '120px';
+                                            if (header && header.includes('Policy') || header && header.includes('Address') || header && header.includes('Street')) {
+                                                columnWidth = '150px';
+                                            } else if (header && header.includes('Description') || header && header.includes('Matched')) {
+                                                columnWidth = '180px';
+                                            } else if (header && header.includes('Code') || header && header.includes('State') || header && header.includes('Zip')) {
+                                                columnWidth = '80px';
+                                            } else if (header && header.includes('Premium') || header && header.includes('Total')) {
+                                                columnWidth = '100px';
+                                            }
+                                            
+                                            return (
+                                            <td key={cellIdx} style={{ 
+                                                padding: '8px 12px', 
+                                                fontSize: '12px', 
+                                                whiteSpace: 'nowrap',
+                                                width: columnWidth,
+                                                minWidth: columnWidth,
+                                                maxWidth: columnWidth,
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                <span title={cell}>{cell}</span>
+                                            </td>
+                                            );
+                                        })}
                                     </tr>
                                     ))}
                                 </tbody>
