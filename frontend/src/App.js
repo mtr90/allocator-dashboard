@@ -205,7 +205,7 @@ const JobCard = ({ job, jobId, isActive, onSelect, onStatusChange, onContextMenu
 };
 
 // Context Menu Component
-const ContextMenu = ({ x, y, visible, onDownloadAll }) => {
+const ContextMenu = ({ x, y, visible, onDownloadAll, onDeleteJob }) => {
     if (!visible) return null;
 
     return (
@@ -237,6 +237,23 @@ const ContextMenu = ({ x, y, visible, onDownloadAll }) => {
                 onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
             >
                 Download All Reports
+            </button>
+            <button
+                onClick={onDeleteJob}
+                style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: '#dc3545'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#f5f5f5'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+            >
+                Delete Job
             </button>
         </div>
     );
@@ -300,6 +317,34 @@ const App = () => {
             a.click();
             URL.revokeObjectURL(url);
         });
+        handleCloseContextMenu();
+    };
+
+    const handleDeleteJob = (jobId) => {
+        if (window.confirm('Are you sure you want to delete this job? This action cannot be undone.')) {
+            setJobs(prev => {
+                const newJobs = { ...prev };
+                delete newJobs[jobId];
+                return newJobs;
+            });
+            
+            // If the deleted job was active, select another job
+            if (activeJobId === jobId) {
+                const remainingJobIds = Object.keys(jobs).filter(id => id !== jobId);
+                if (remainingJobIds.length > 0) {
+                    // Select the most recent job (first in the reversed list)
+                    const sortedJobIds = remainingJobIds.sort((a, b) => {
+                        const aNum = parseInt(a.split('-')[1]);
+                        const bNum = parseInt(b.split('-')[1]);
+                        return bNum - aNum; // Descending order (newest first)
+                    });
+                    setActiveJobId(sortedJobIds[0]);
+                } else {
+                    setActiveJobId(null);
+                }
+            }
+        }
+        handleCloseContextMenu();
     };
 
     const handleFileUpload = async (event) => {
@@ -540,7 +585,14 @@ const App = () => {
                         </div>
                     </div>
                     
-                    {Object.entries(jobs).map(([jobId, job]) => (
+                    {Object.entries(jobs)
+                        .sort(([a], [b]) => {
+                            // Sort by job ID number in descending order (newest first)
+                            const aNum = parseInt(a.split('-')[1]);
+                            const bNum = parseInt(b.split('-')[1]);
+                            return bNum - aNum;
+                        })
+                        .map(([jobId, job]) => (
                         <JobCard
                             key={jobId}
                             job={job}
@@ -681,15 +733,20 @@ const App = () => {
                 </footer>
             </div>
           </div>
-          <ContextMenu
+           <ContextMenu
+            visible={contextMenu.visible}
             x={contextMenu.x}
             y={contextMenu.y}
-            visible={contextMenu.visible}
             onDownloadAll={() => {
                 if (contextMenu.jobId) {
                     handleDownloadAllReports(contextMenu.jobId);
                 }
                 handleCloseContextMenu();
+            }}
+            onDeleteJob={() => {
+                if (contextMenu.jobId) {
+                    handleDeleteJob(contextMenu.jobId);
+                }
             }}
            />
         </>
