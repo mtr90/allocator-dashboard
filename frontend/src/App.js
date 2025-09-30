@@ -348,10 +348,14 @@ const App = () => {
                 setActiveJobId(newJobId);
                 setActiveTab("Job Summary");
             } else {
-                console.error('Upload failed');
+                console.error('Upload failed:', response.status, response.statusText);
+                const errorText = await response.text();
+                console.error('Error response:', errorText);
+                alert(`Upload failed: ${response.status} ${response.statusText}`);
             }
         } catch (error) {
             console.error('Upload error:', error);
+            alert(`Upload error: ${error.message}`);
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
