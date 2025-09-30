@@ -387,10 +387,25 @@ const App = () => {
             const formData = new FormData();
             formData.append('file', file);
 
-            // Simulate progress
+            // Create processing job immediately to show in sidebar
+            const processingJobId = `job-${Date.now()}`;
+            const processingJob = {
+                title: `(${Object.keys(jobs).length + 1})${file.name}`,
+                shortTitle: `${file.name.split('.')[0]}, ${new Date().getFullYear()}, KY, Q4`,
+                details: `Processing...`,
+                match: `Processing...`,
+                status: "Processing",
+                reports: {}
+            };
+
+            setJobs(prev => ({ ...prev, [processingJobId]: processingJob }));
+            setActiveJobId(processingJobId);
+            setActiveTab("Job Summary");
+
+            // Show progress during geocoding
             const progressInterval = setInterval(() => {
-                setUploadProgress(prev => Math.min(prev + 10, 90));
-            }, 200);
+                setUploadProgress(prev => Math.min(prev + 5, 85));
+            }, 500);
 
             const apiUrl = process.env.NODE_ENV === 'production' 
                 ? '/api/geocode' 
@@ -408,26 +423,26 @@ const App = () => {
                 const result = await response.json();
                 console.log('API Response:', result);
                 
-                // Create new job with geocoded results
-                const newJobId = `job-${Date.now()}`;
-                const newJob = {
-                    title: `(${Object.keys(jobs).length + 1})${file.name}`,
+                // Update the processing job with results
+                const completedJob = {
+                    title: `(${Object.keys(jobs).length})${file.name}`,
                     shortTitle: `${file.name.split('.')[0]}, ${new Date().getFullYear()}, KY, Q4`,
-                    details: `(${Object.keys(jobs).length + 1})${file.name.substring(0, 20)}...`,
+                    details: `${result.totalRecords} records processed`,
                     match: `${result.matchPercentage}%`,
                     status: "Under Review",
                     reports: result.reports || {}
                 };
 
-                console.log('Creating new job:', newJob);
+                console.log('Updating job with results:', completedJob);
                 setJobs(prev => {
-                    const updated = { ...prev, [newJobId]: newJob };
+                    const updated = { ...prev, [processingJobId]: completedJob };
                     console.log('Updated jobs:', updated);
                     return updated;
                 });
-                setActiveJobId(newJobId);
-                setActiveTab("Job Summary");
-                console.log('Set active job to:', newJobId);
+                
+                if (result.message) {
+                    console.log('Processing message:', result.message);
+                }
             } else {
                 console.error('Upload failed:', response.status, response.statusText);
                 const errorText = await response.text();
