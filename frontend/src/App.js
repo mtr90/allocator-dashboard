@@ -272,6 +272,7 @@ const App = () => {
     const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, jobId: null });
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
+    const [isDragOver, setIsDragOver] = useState(false);
 
     const activeJob = jobs[activeJobId];
     const tabs = activeJob ? Object.keys(activeJob.reports) : [];
@@ -347,10 +348,38 @@ const App = () => {
         handleCloseContextMenu();
     };
 
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
+                processFile(file);
+            } else {
+                alert('Please upload a CSV file only.');
+            }
+        }
+    };
+
     const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file) return;
+        processFile(file);
+    };
 
+    const processFile = async (file) => {
         setIsUploading(true);
         setUploadProgress(0);
 
@@ -404,7 +433,6 @@ const App = () => {
         } finally {
             setIsUploading(false);
             setUploadProgress(0);
-            event.target.value = '';
         }
     };
 
@@ -500,7 +528,7 @@ const App = () => {
                         </div>
                     </div>
                     
-                    {/* Upload Section */}
+                    {/* Drag and Drop Upload Section */}
                     <div style={{ position: 'relative' }}>
                         <input
                             type="file"
@@ -510,36 +538,59 @@ const App = () => {
                             id="file-upload"
                             disabled={isUploading}
                         />
-                        <label
-                            htmlFor="file-upload"
+                        <div
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => !isUploading && document.getElementById('file-upload').click()}
                             style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                padding: '8px 12px',
-                                backgroundColor: isUploading ? '#6c757d' : '#28a745',
-                                color: 'white',
-                                borderRadius: '4px',
+                                border: `2px dashed ${isDragOver ? '#28a745' : '#6c757d'}`,
+                                borderRadius: '8px',
+                                padding: '24px 16px',
+                                textAlign: 'center',
                                 cursor: isUploading ? 'not-allowed' : 'pointer',
-                                fontSize: '14px',
-                                fontWeight: '500',
-                                border: 'none',
-                                width: '100%',
-                                justifyContent: 'center'
+                                backgroundColor: isDragOver ? 'rgba(40, 167, 69, 0.1)' : 'transparent',
+                                transition: 'all 0.3s ease',
+                                opacity: isUploading ? 0.6 : 1
                             }}
                         >
-                            <Upload size={16} />
-                            {isUploading ? `Uploading... ${uploadProgress}%` : 'Upload CSV'}
-                        </label>
+                            <div style={{ marginBottom: '8px' }}>
+                                <HardDriveDownload 
+                                    size={24} 
+                                    color={isDragOver ? '#28a745' : COLORS.textSecondary}
+                                    style={{ margin: '0 auto' }}
+                                />
+                            </div>
+                            <div style={{
+                                fontSize: '14px',
+                                color: isDragOver ? '#28a745' : COLORS.textSecondary,
+                                fontWeight: '500',
+                                lineHeight: '1.4'
+                            }}>
+                                {isUploading ? (
+                                    <>
+                                        <div>Processing...</div>
+                                        <div style={{ fontSize: '12px', marginTop: '4px' }}>
+                                            {uploadProgress}% complete
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div>Click or drag CSV file</div>
+                                        <div>to process a job</div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
                         {isUploading && (
                             <div style={{
                                 position: 'absolute',
                                 bottom: '-8px',
                                 left: 0,
                                 right: 0,
-                                height: '2px',
+                                height: '3px',
                                 backgroundColor: '#e9ecef',
-                                borderRadius: '1px',
+                                borderRadius: '2px',
                                 overflow: 'hidden'
                             }}>
                                 <div style={{
