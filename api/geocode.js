@@ -139,8 +139,8 @@ export default async function handler(req, res) {
       }
     }
     
-    // Process records with real geocoding (limit to 20 for timeout safety)
-    const maxRecords = Math.min(records.length, 20);
+    // Process records with real geocoding (limit to 100 for better coverage)
+    const maxRecords = Math.min(records.length, 100);
     const geocodedResults = [];
     const matchSummary = { '-1': 0, '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, '8': 0, '9': 0 };
     
@@ -171,7 +171,7 @@ export default async function handler(req, res) {
       
       // Add delay between API calls to respect rate limits
       if (i < maxRecords - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
     }
     
