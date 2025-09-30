@@ -531,9 +531,9 @@ const App = () => {
 
     return (
         <>
-        <div style={{ display: 'flex', height: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: COLORS.mainBg }}>
+        <div style={{ display: 'flex', height: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: COLORS.mainBg, overflow: 'hidden' }}>
             {/* Sidebar */}
-            <div style={{ width: '320px', backgroundColor: COLORS.sidebarBg, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '320px', minWidth: '320px', maxWidth: '320px', backgroundColor: COLORS.sidebarBg, display: 'flex', flexDirection: 'column' }}>
                 {/* Header */}
                 <div style={{ padding: '16px 20px', borderBottom: `1px solid ${COLORS.borderColor}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
@@ -686,7 +686,7 @@ const App = () => {
             </div>
 
             {/* Main Content */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
                 {/* Header */}
                 <div style={{ backgroundColor: COLORS.headerBg, padding: '16px 24px' }}>
                     <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: COLORS.textSecondary }}>
@@ -714,9 +714,9 @@ const App = () => {
                     </div>
                 </div>
                 
-                <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
+                <div style={{ flex: 1, padding: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
                     { activeJob ? (
-                    <div style={{ backgroundColor: COLORS.contentPanelBg, borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px' }}>
+                    <div style={{ backgroundColor: COLORS.contentPanelBg, borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', flex: 1 }}>
                         {/* Controls */}
                         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.mainBg}`}}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -736,12 +736,29 @@ const App = () => {
                         </div>
 
                         {/* Table */}
-                        <div style={{ overflow: 'auto', flexGrow: 1, minHeight: '400px', maxHeight: '600px' }}>
-                            <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', color: COLORS.textDark, tableLayout: 'auto' }}>
+                        <div style={{ overflow: 'auto', flex: 1, minHeight: '500px' }}>
+                            <table style={{ width: '100%', minWidth: '1200px', borderCollapse: 'collapse', color: COLORS.textDark, tableLayout: 'fixed' }}>
                                 <thead style={{ backgroundColor: COLORS.tableHeaderBg, position: 'sticky', top: 0, zIndex: 1 }}>
                                     <tr>
                                         {currentReportData.headers.map((header, idx) => (
-                                        <th key={idx} onClick={() => handleSort(header)} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none', borderBottom: '2px solid #dee2e6', minWidth: '120px', whiteSpace: 'nowrap' }}>
+                                        <th key={idx} onClick={() => handleSort(header)} style={{ 
+                                            padding: '10px 8px', 
+                                            textAlign: 'left', 
+                                            fontSize: '11px', 
+                                            fontWeight: '600', 
+                                            color: '#495057', 
+                                            textTransform: 'uppercase', 
+                                            letterSpacing: '0.05em', 
+                                            cursor: 'pointer', 
+                                            userSelect: 'none', 
+                                            borderBottom: '2px solid #dee2e6', 
+                                            width: `${100 / currentReportData.headers.length}%`,
+                                            minWidth: '80px',
+                                            maxWidth: '150px',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}>
                                             {header} {sortColumn === header && (sortDirection === 'asc' ? '↑' : '↓')}
                                         </th>
                                         ))}
@@ -758,8 +775,15 @@ const App = () => {
                                     {paginatedData.map((row, rowIdx) => (
                                     <tr key={rowIdx} onClick={() => setSelectedRow(rowIdx)} style={{ borderBottom: `1px solid ${COLORS.mainBg}`, backgroundColor: selectedRow === rowIdx ? '#e9ecef' : 'transparent', cursor: 'pointer' }}>
                                         {row.map((cell, cellIdx) => (
-                                        <td key={cellIdx} style={{ padding: '10px 16px', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                                            {cell}
+                                        <td key={cellIdx} style={{ 
+                                            padding: '10px 8px', 
+                                            fontSize: '13px', 
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap',
+                                            maxWidth: '150px'
+                                        }}>
+                                            <span title={cell}>{cell}</span>
                                         </td>
                                         ))}
                                     </tr>
