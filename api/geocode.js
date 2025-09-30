@@ -98,14 +98,41 @@ export default async function handler(req, res) {
         
         if (data.result && data.result.addressMatches && data.result.addressMatches.length > 0) {
           const match = data.result.addressMatches[0];
-          console.log(`✓ Good match for: ${address}`);
-          return {
-            matchCode: '0',
-            matchDescription: 'Good Match',
-            matchedAddress: match.matchedAddress,
-            coordinates: match.coordinates,
-            tigerLine: match.tigerLine
-          };
+          
+          // Extract state from matched address or coordinates
+          let matchedState = '';
+          if (match.addressComponents && match.addressComponents.state) {
+            matchedState = match.addressComponents.state.toUpperCase();
+          } else if (match.matchedAddress) {
+            // Extract state from matched address string (usually format: "123 MAIN ST, CITY, ST 12345")
+            const addressParts = match.matchedAddress.split(',');
+            if (addressParts.length >= 3) {
+              const stateZip = addressParts[addressParts.length - 1].trim();
+              const statePart = stateZip.split(' ')[0];
+              matchedState = statePart.toUpperCase();
+            }
+          }
+          
+          // Check if address is in Kentucky
+          if (matchedState === 'KY' || matchedState === 'KENTUCKY') {
+            console.log(`✓ Good match in Kentucky for: ${address}`);
+            return {
+              matchCode: '0',
+              matchDescription: 'Good Match',
+              matchedAddress: match.matchedAddress,
+              coordinates: match.coordinates,
+              tigerLine: match.tigerLine
+            };
+          } else {
+            console.log(`✗ Address not in Kentucky (found in ${matchedState}): ${address}`);
+            return {
+              matchCode: '5',
+              matchDescription: 'Address not in state',
+              matchedAddress: match.matchedAddress,
+              coordinates: match.coordinates,
+              tigerLine: match.tigerLine
+            };
+          }
         } else {
           console.log(`✗ No match for: ${address}`);
           // Determine specific match code based on address characteristics
