@@ -1,0 +1,110 @@
+flowchart TD
+    START([👤 User Opens Dashboard]) --> UPLOAD{📁 Upload CSV File}
+    
+    %% Upload Methods
+    UPLOAD --> DRAG[🖱️ Drag & Drop File]
+    UPLOAD --> CLICK[👆 Click Upload Area]
+    
+    DRAG --> VALIDATE[✅ File Validation]
+    CLICK --> VALIDATE
+    
+    %% Processing Flow
+    VALIDATE --> |Valid CSV| PROCESS[⚡ Processing Starts]
+    VALIDATE --> |Invalid File| ERROR[❌ Error Message]
+    
+    PROCESS --> PROGRESS[📊 Progress Indicator<br/>0% → 100%]
+    PROGRESS --> GEOCODING[🌍 Real-time Geocoding<br/>Census Bureau API]
+    
+    %% Geocoding Results
+    GEOCODING --> MATCH_GOOD[✅ Good Matches<br/>Coordinates Found]
+    GEOCODING --> MATCH_FAIL[❌ Failed Matches<br/>No Coordinates]
+    GEOCODING --> MATCH_PO[📮 PO Box Detected<br/>Special Handling]
+    
+    %% Job Creation
+    MATCH_GOOD --> JOB_CREATE[📋 New Job Created]
+    MATCH_FAIL --> JOB_CREATE
+    MATCH_PO --> JOB_CREATE
+    
+    JOB_CREATE --> SIDEBAR[📌 Job Appears in Sidebar<br/>Newest at Top]
+    
+    %% Report Viewing
+    SIDEBAR --> VIEW_REPORTS{📊 View Reports}
+    
+    VIEW_REPORTS --> JOB_SUMMARY[📈 Job Summary<br/>Match Statistics]
+    VIEW_REPORTS --> ALLOCATION_DETAIL[📋 Allocation Detail<br/>24 Columns with Scroll]
+    VIEW_REPORTS --> ALLOCATION_SUMMARY[📊 Allocation Summary<br/>County Breakdown]
+    VIEW_REPORTS --> SOURCE_DATA[📄 Source Data<br/>Original Addresses]
+    VIEW_REPORTS --> MATCH_EXCEPTIONS[⚠️ Match Exceptions<br/>Failed Geocoding]
+    
+    %% User Actions
+    JOB_SUMMARY --> ACTIONS{🖱️ User Actions}
+    ALLOCATION_DETAIL --> ACTIONS
+    ALLOCATION_SUMMARY --> ACTIONS
+    SOURCE_DATA --> ACTIONS
+    MATCH_EXCEPTIONS --> ACTIONS
+    
+    ACTIONS --> RIGHT_CLICK[🖱️ Right-Click Job]
+    ACTIONS --> DOWNLOAD[💾 Download CSV]
+    ACTIONS --> NEW_UPLOAD[📁 Upload New File]
+    
+    %% Context Menu
+    RIGHT_CLICK --> CONTEXT_MENU[📋 Context Menu]
+    CONTEXT_MENU --> DELETE_JOB[🗑️ Delete Job]
+    CONTEXT_MENU --> DOWNLOAD_ALL[💾 Download All Reports]
+    
+    DELETE_JOB --> CONFIRM[❓ Confirm Deletion]
+    CONFIRM --> |Yes| REMOVE[✅ Job Removed]
+    CONFIRM --> |No| SIDEBAR
+    
+    DOWNLOAD_ALL --> CSV_FILES[📄 Multiple CSV Files]
+    DOWNLOAD --> CSV_FILES
+    
+    %% Loop Back
+    NEW_UPLOAD --> UPLOAD
+    REMOVE --> SIDEBAR
+    CSV_FILES --> SIDEBAR
+    ERROR --> UPLOAD
+    
+    %% Data Processing Details
+    subgraph "🔧 Backend Processing"
+        PARSE_CSV[📄 Parse CSV Data]
+        EXTRACT_ADDR[📍 Extract Addresses]
+        CALL_API[🌐 Call Census API]
+        ASSIGN_JURISDICTION[🗺️ Assign Jurisdictions]
+        GENERATE_REPORTS[📋 Generate Reports]
+        
+        PARSE_CSV --> EXTRACT_ADDR
+        EXTRACT_ADDR --> CALL_API
+        CALL_API --> ASSIGN_JURISDICTION
+        ASSIGN_JURISDICTION --> GENERATE_REPORTS
+    end
+    
+    GEOCODING -.-> PARSE_CSV
+    GENERATE_REPORTS -.-> JOB_CREATE
+    
+    %% Key Features Callouts
+    subgraph "✨ Key Features"
+        FEATURE1[🎯 Real Census Bureau Geocoding]
+        FEATURE2[📊 Professional Dashboard UI]
+        FEATURE3[🖱️ Drag & Drop Interface]
+        FEATURE4[📋 Multiple Report Types]
+        FEATURE5[🗑️ Job Management]
+        FEATURE6[💾 CSV Export]
+        FEATURE7[⚡ Up to 100 Records]
+        FEATURE8[🔄 Real-time Processing]
+    end
+    
+    %% Styling
+    classDef startClass fill:#e8f5e8,stroke:#2e7d32,stroke-width:3px
+    classDef processClass fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    classDef resultClass fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef actionClass fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef errorClass fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef featureClass fill:#f1f8e9,stroke:#558b2f,stroke-width:2px
+    
+    class START startClass
+    class PROCESS,PROGRESS,GEOCODING,JOB_CREATE processClass
+    class JOB_SUMMARY,ALLOCATION_DETAIL,ALLOCATION_SUMMARY,SOURCE_DATA,MATCH_EXCEPTIONS resultClass
+    class ACTIONS,RIGHT_CLICK,DOWNLOAD,DELETE_JOB actionClass
+    class ERROR errorClass
+    class FEATURE1,FEATURE2,FEATURE3,FEATURE4,FEATURE5,FEATURE6,FEATURE7,FEATURE8 featureClass

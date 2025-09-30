@@ -1,0 +1,109 @@
+graph TB
+    %% User Interface Layer
+    subgraph "Frontend - React Application"
+        UI[🖥️ Allocator Dashboard UI]
+        DRAG[📁 Drag & Drop Upload]
+        JOBS[📋 Job Management]
+        REPORTS[📊 Report Viewer]
+        CONTEXT[🖱️ Right-Click Context Menu]
+    end
+
+    %% User Actions
+    USER[👤 User] --> UI
+    USER --> DRAG
+    
+    %% File Processing Flow
+    DRAG --> |CSV File Upload| UPLOAD[⬆️ File Upload Handler]
+    UPLOAD --> |FormData| API[🔧 Backend API]
+    
+    %% Backend Processing
+    subgraph "Backend - Node.js/Express on Vercel"
+        API --> PARSE[📄 CSV Parser]
+        PARSE --> |Extract Addresses| GEOCODE[🌍 Geocoding Engine]
+        GEOCODE --> |Real-time Processing| CENSUS[🏛️ US Census Bureau API]
+        CENSUS --> |Coordinates & Match Codes| RESULTS[📈 Results Processor]
+        RESULTS --> REPORTS_GEN[📋 Report Generator]
+    end
+    
+    %% External Services
+    subgraph "External APIs"
+        CENSUS
+        CENSUS_DESC[📍 Official US Government<br/>Geocoding Service<br/>✅ Free & Reliable<br/>✅ High Accuracy]
+    end
+    
+    %% Data Processing
+    subgraph "Data Processing Pipeline"
+        PARSE --> |Up to 100 Records| BATCH[⚡ Batch Processing]
+        BATCH --> |50ms Delays| RATE[⏱️ Rate Limiting]
+        RATE --> GEOCODE
+    end
+    
+    %% Report Generation
+    subgraph "Report Generation"
+        REPORTS_GEN --> JOB_SUMMARY[📊 Job Summary Report]
+        REPORTS_GEN --> ALLOCATION_DETAIL[📋 Allocation Detail Report]
+        REPORTS_GEN --> ALLOCATION_SUMMARY[📈 Allocation Summary Report]
+        REPORTS_GEN --> SOURCE_DATA[📄 Source Data Report]
+        REPORTS_GEN --> MATCH_EXCEPTIONS[⚠️ Match Exceptions Report]
+    end
+    
+    %% Response Flow
+    REPORTS_GEN --> |JSON Response| API
+    API --> |Geocoded Results| UI
+    UI --> JOBS
+    JOBS --> |Display Results| REPORTS
+    
+    %% User Interactions
+    JOBS --> |Right-Click| CONTEXT
+    CONTEXT --> |Delete Job| DELETE[🗑️ Delete Handler]
+    CONTEXT --> |Download Reports| DOWNLOAD[💾 CSV Export]
+    
+    %% Infrastructure
+    subgraph "Deployment Infrastructure"
+        VERCEL[☁️ Vercel Platform]
+        GITHUB[📚 GitHub Repository]
+        SERVERLESS[⚡ Serverless Functions]
+    end
+    
+    API -.-> SERVERLESS
+    SERVERLESS -.-> VERCEL
+    GITHUB -.-> VERCEL
+    
+    %% Match Code Processing
+    subgraph "Match Code Classification"
+        MATCH_0[✅ Good Match - Code 0]
+        MATCH_3[❌ No Candidates - Code 3]
+        MATCH_4[📮 PO Box - Code 4]
+        MATCH_OTHER[📝 Other Codes 1-9]
+    end
+    
+    CENSUS --> MATCH_0
+    CENSUS --> MATCH_3
+    CENSUS --> MATCH_4
+    CENSUS --> MATCH_OTHER
+    
+    %% Jurisdiction Assignment
+    subgraph "Kentucky Jurisdiction Mapping"
+        JURISDICTIONS[🗺️ City/County Mapping]
+        CODES[🏷️ Jurisdiction Codes]
+        COUNTIES[🏛️ County Assignment]
+    end
+    
+    RESULTS --> JURISDICTIONS
+    JURISDICTIONS --> CODES
+    CODES --> COUNTIES
+    
+    %% Styling
+    classDef userClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef frontendClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef backendClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef externalClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef infraClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef reportClass fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    
+    class USER userClass
+    class UI,DRAG,JOBS,REPORTS,CONTEXT frontendClass
+    class API,PARSE,GEOCODE,RESULTS,REPORTS_GEN,BATCH,RATE backendClass
+    class CENSUS,CENSUS_DESC externalClass
+    class VERCEL,GITHUB,SERVERLESS infraClass
+    class JOB_SUMMARY,ALLOCATION_DETAIL,ALLOCATION_SUMMARY,SOURCE_DATA,MATCH_EXCEPTIONS reportClass

@@ -1,0 +1,120 @@
+graph TB
+    %% Title
+    TITLE[🏗️ Allocator Dashboard Technology Stack]
+    
+    %% Frontend Technologies
+    subgraph "🎨 Frontend Layer"
+        REACT[⚛️ React 18<br/>Modern UI Framework]
+        JAVASCRIPT[📜 JavaScript ES6+<br/>Interactive Logic]
+        CSS[🎨 CSS3 Styling<br/>Professional Design]
+        HTML[📄 HTML5<br/>Semantic Structure]
+    end
+    
+    %% Backend Technologies
+    subgraph "⚙️ Backend Layer"
+        NODEJS[🟢 Node.js<br/>Server Runtime]
+        EXPRESS[🚀 Express.js<br/>Web Framework]
+        SERVERLESS[⚡ Serverless Functions<br/>Auto-scaling]
+    end
+    
+    %% External APIs
+    subgraph "🌐 External Services"
+        CENSUS_API[🏛️ US Census Bureau API<br/>📍 Official Geocoding Service<br/>✅ Free & Reliable<br/>🎯 High Accuracy]
+        VERCEL_API[☁️ Vercel Platform API<br/>🚀 Deployment & Hosting]
+    end
+    
+    %% Data Processing
+    subgraph "📊 Data Processing"
+        CSV_PARSER[📄 CSV Parser<br/>File Processing]
+        GEOCODER[🌍 Geocoding Engine<br/>Address → Coordinates]
+        REPORT_GEN[📋 Report Generator<br/>Multiple Formats]
+    end
+    
+    %% Infrastructure
+    subgraph "🏗️ Infrastructure"
+        VERCEL[☁️ Vercel<br/>Global CDN & Hosting]
+        GITHUB[📚 GitHub<br/>Version Control & CI/CD]
+        DOMAIN[🌐 Custom Domain<br/>Production URL]
+    end
+    
+    %% Development Tools
+    subgraph "🛠️ Development Tools"
+        GIT[📝 Git<br/>Version Control]
+        NPM[📦 NPM<br/>Package Management]
+        WEBPACK[📦 Webpack<br/>Module Bundling]
+        BABEL[🔄 Babel<br/>JavaScript Transpiling]
+    end
+    
+    %% Security & Performance
+    subgraph "🔒 Security & Performance"
+        CORS[🛡️ CORS Protection<br/>Cross-Origin Security]
+        RATE_LIMIT[⏱️ Rate Limiting<br/>API Protection]
+        CACHING[💾 Browser Caching<br/>Performance]
+        SSL[🔐 SSL/TLS<br/>Encrypted Connections]
+    end
+    
+    %% Data Flow
+    REACT --> NODEJS
+    NODEJS --> EXPRESS
+    EXPRESS --> SERVERLESS
+    SERVERLESS --> CENSUS_API
+    
+    CSV_PARSER --> GEOCODER
+    GEOCODER --> REPORT_GEN
+    
+    GITHUB --> VERCEL
+    VERCEL --> DOMAIN
+    
+    %% Key Features
+    subgraph "✨ Key Capabilities"
+        DRAG_DROP[🖱️ Drag & Drop Upload]
+        REAL_TIME[⚡ Real-time Processing]
+        MULTI_REPORT[📊 Multiple Report Types]
+        JOB_MGMT[📋 Job Management]
+        CSV_EXPORT[💾 CSV Export]
+        RESPONSIVE[📱 Responsive Design]
+    end
+    
+    %% Performance Metrics
+    subgraph "📈 Performance Metrics"
+        RECORDS[📊 Up to 100 Records/Job]
+        SPEED[⚡ 5-8 Second Processing]
+        ACCURACY[🎯 95%+ Match Rate]
+        UPTIME[⏰ 99.9% Uptime]
+    end
+    
+    %% Open Source Components
+    subgraph "🆓 Open Source Components"
+        REACT_OS[⚛️ React - MIT License]
+        NODE_OS[🟢 Node.js - MIT License]
+        EXPRESS_OS[🚀 Express - MIT License]
+        CENSUS_OS[🏛️ Census API - Public Domain]
+    end
+    
+    %% Connections
+    TITLE -.-> REACT
+    TITLE -.-> NODEJS
+    TITLE -.-> CENSUS_API
+    
+    %% Styling
+    classDef frontendClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef backendClass fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef externalClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef infraClass fill:#fce4ec,stroke:#880e4f,stroke-width:2px
+    classDef toolClass fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef securityClass fill:#ffebee,stroke:#c62828,stroke-width:2px
+    classDef featureClass fill:#f1f8e9,stroke:#33691e,stroke-width:2px
+    classDef metricClass fill:#e0f2f1,stroke:#00695c,stroke-width:2px
+    classDef osClass fill:#fff8e1,stroke:#f57f17,stroke-width:2px
+    classDef titleClass fill:#e8eaf6,stroke:#3f51b5,stroke-width:3px
+    
+    class TITLE titleClass
+    class REACT,JAVASCRIPT,CSS,HTML frontendClass
+    class NODEJS,EXPRESS,SERVERLESS backendClass
+    class CENSUS_API,VERCEL_API externalClass
+    class VERCEL,GITHUB,DOMAIN infraClass
+    class GIT,NPM,WEBPACK,BABEL toolClass
+    class CORS,RATE_LIMIT,CACHING,SSL securityClass
+    class DRAG_DROP,REAL_TIME,MULTI_REPORT,JOB_MGMT,CSV_EXPORT,RESPONSIVE featureClass
+    class RECORDS,SPEED,ACCURACY,UPTIME metricClass
+    class REACT_OS,NODE_OS,EXPRESS_OS,CENSUS_OS osClass
