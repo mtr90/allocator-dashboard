@@ -1,7 +1,7 @@
-import { IncomingForm } from 'formidable';
-import Papa from 'papaparse';
-import axios from 'axios';
-import fs from 'fs';
+const formidable = require('formidable');
+const Papa = require('papaparse');
+const axios = require('axios');
+const fs = require('fs');
 
 // Disable body parser for file uploads
 export const config = {
@@ -220,7 +220,7 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
 }
 
 // Main handler function
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -237,8 +237,9 @@ export default async function handler(req, res) {
 
   try {
     // Parse the multipart form data
-    const form = new IncomingForm();
-    form.maxFileSize = 10 * 1024 * 1024; // 10MB limit
+    const form = formidable({
+      maxFileSize: 10 * 1024 * 1024, // 10MB limit
+    });
     
     const [fields, files] = await form.parse(req);
     
@@ -356,4 +357,4 @@ export default async function handler(req, res) {
       details: error.message 
     });
   }
-}
+};
