@@ -268,9 +268,17 @@ export default async function handler(req, res) {
 
     console.log(`Processing ${records.length} records...`);
 
+    // Limit processing for large files to avoid timeout
+    const maxRecords = Math.min(records.length, 50); // Process max 50 records to avoid timeout
+    const processedRecords = records.slice(0, maxRecords);
+    
+    if (records.length > maxRecords) {
+      console.log(`Large file detected. Processing first ${maxRecords} records of ${records.length} total.`);
+    }
+
     // Process each record
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
+    for (let i = 0; i < processedRecords.length; i++) {
+      const record = processedRecords[i];
       
       // Extract address from common CSV column names
       const address = record.Address || record.address || record['Source Address'] || 
@@ -287,7 +295,7 @@ export default async function handler(req, res) {
         continue;
       }
 
-      console.log(`Geocoding ${i + 1}/${records.length}: ${address}`);
+      console.log(`Geocoding ${i + 1}/${processedRecords.length}: ${address}`);
 
       // Geocode the address
       const geocodeResult = await geocodeAddress(address);
@@ -312,9 +320,9 @@ export default async function handler(req, res) {
       geocodedResults.push(result);
       matchSummary[geocodeResult.matchCode]++;
 
-      // Add delay between API calls as requested
-      if (i < records.length - 1) {
-        await delay(200); // 200ms delay
+      // Reduced delay for faster processing
+      if (i < processedRecords.length - 1) {
+        await delay(100); // Reduced to 100ms delay
       }
     }
 
