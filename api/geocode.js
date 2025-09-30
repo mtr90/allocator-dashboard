@@ -1,7 +1,7 @@
-const formidable = require('formidable');
-const Papa = require('papaparse');
-const axios = require('axios');
-const fs = require('fs');
+import formidable from 'formidable';
+import Papa from 'papaparse';
+import axios from 'axios';
+import fs from 'fs';
 
 // Disable body parser for file uploads
 export const config = {
@@ -33,26 +33,17 @@ async function geocodeAddress(address) {
           tigerLine: match.tigerLine,
           side: match.side
         };
-      } else {
-        return {
-          matchCode: '3', // No Candidates
-          matchDescription: 'No Candidates',
-          matchedAddress: '',
-          coordinates: null,
-          tigerLine: null,
-          side: null
-        };
       }
-    } else {
-      return {
-        matchCode: '3', // No Candidates
-        matchDescription: 'No Candidates',
-        matchedAddress: '',
-        coordinates: null,
-        tigerLine: null,
-        side: null
-      };
     }
+    
+    return {
+      matchCode: '3', // No Candidates
+      matchDescription: 'No Candidates',
+      matchedAddress: '',
+      coordinates: null,
+      tigerLine: null,
+      side: null
+    };
   } catch (error) {
     console.error('Geocoding error for address:', address, error.message);
     return {
@@ -220,7 +211,7 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
 }
 
 // Main handler function
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -357,4 +348,4 @@ module.exports = async (req, res) => {
       details: error.message 
     });
   }
-};
+}

@@ -1,4 +1,4 @@
-module.exports = (req, res) => {
+export default function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -18,4 +18,4 @@ module.exports = (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'Allocator Dashboard Geocoding API'
   });
-};
+}
