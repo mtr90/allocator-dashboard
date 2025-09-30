@@ -431,6 +431,7 @@ const App = () => {
     };
 
     return (
+        <>
         <div style={{ display: 'flex', height: '100vh', fontFamily: 'Inter, system-ui, sans-serif', backgroundColor: COLORS.mainBg }}>
             {/* Sidebar */}
             <div style={{ width: '320px', backgroundColor: COLORS.sidebarBg, display: 'flex', flexDirection: 'column' }}>
@@ -688,6 +689,7 @@ const App = () => {
             }}
            />
         </div>
+        </>
       );
 };
 
