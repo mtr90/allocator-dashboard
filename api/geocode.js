@@ -1,21 +1,10 @@
-const express = require('express');
 const multer = require('multer');
 const Papa = require('papaparse');
-const cors = require('cors');
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Configure multer for file uploads (use /tmp for serverless)
+// Configure multer for serverless environment
 const upload = multer({
-  dest: '/tmp/',
+  storage: multer.memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit
   },
@@ -91,9 +80,6 @@ function delay(ms) {
 
 // Helper function to determine jurisdiction based on coordinates
 function determineJurisdiction(coordinates, address) {
-  // This is a simplified jurisdiction assignment
-  // In a real implementation, you would use GIS data or lookup tables
-  
   if (!coordinates) {
     // Default to county based on address parsing
     if (address.toUpperCase().includes('LOUISVILLE')) return { name: 'JEFFERSON COUNTY', code: '56-00000' };
@@ -123,129 +109,6 @@ function determineJurisdiction(coordinates, address) {
 
   return { name: 'UNKNOWN COUNTY', code: '00-00000' };
 }
-
-// Main geocoding endpoint
-app.post('/api/geocode', upload.single('file'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Read and parse CSV file
-    const csvData = fs.readFileSync(req.file.path, 'utf8');
-    const parseResult = Papa.parse(csvData, {
-      header: true,
-      skipEmptyLines: true,
-      transformHeader: (header) => header.trim()
-    });
-
-    if (parseResult.errors.length > 0) {
-      return res.status(400).json({ 
-        error: 'CSV parsing error', 
-        details: parseResult.errors 
-      });
-    }
-
-    const records = parseResult.data;
-    const geocodedResults = [];
-    const matchSummary = {
-      '0': 0, // Good Match
-      '1': 0, // Fuzzy Match
-      '2': 0, // Multiple Hits
-      '3': 0, // No Candidates
-      '4': 0, // PO Box or Rural Route
-      '5': 0, // Address not in state
-      '6': 0, // Unverified Address
-      '7': 0, // Street Name Mismatch
-      '8': 0, // ZIP Code Mismatch
-      '9': 0  // Unit Number Missing
-    };
-
-    console.log(`Processing ${records.length} records...`);
-
-    // Process each record
-    for (let i = 0; i < records.length; i++) {
-      const record = records[i];
-      
-      // Extract address from common CSV column names
-      const address = record.Address || record.address || record['Source Address'] || 
-                     record['Street Address'] || record.ADDRESS || '';
-      
-      const policyNumber = record['Policy #'] || record['Policy Number'] || record.Policy || 
-                          record.POLICY || `POL-${i + 1}`;
-      
-      const premiums = record.Premiums || record.Premium || record.PREMIUMS || 
-                      record['Premium Amount'] || '0.00';
-
-      if (!address) {
-        console.log(`Skipping record ${i + 1}: No address found`);
-        continue;
-      }
-
-      console.log(`Geocoding ${i + 1}/${records.length}: ${address}`);
-
-      // Geocode the address
-      const geocodeResult = await geocodeAddress(address);
-      
-      // Determine jurisdiction
-      const jurisdiction = determineJurisdiction(geocodeResult.coordinates, address);
-
-      // Create result record
-      const result = {
-        policyNumber,
-        sourceAddress: address,
-        matchCode: geocodeResult.matchCode,
-        matchDescription: geocodeResult.matchDescription,
-        matchedAddress: geocodeResult.matchedAddress || address,
-        jurisdiction: jurisdiction.name,
-        jurisdictionCode: jurisdiction.code,
-        premiums: premiums,
-        coordinates: geocodeResult.coordinates,
-        originalRecord: record
-      };
-
-      geocodedResults.push(result);
-      matchSummary[geocodeResult.matchCode]++;
-
-      // Add delay between API calls as requested
-      if (i < records.length - 1) {
-        await delay(200); // 200ms delay
-      }
-    }
-
-    // Calculate match percentage
-    const totalRecords = geocodedResults.length;
-    const goodMatches = matchSummary['0'];
-    const matchPercentage = totalRecords > 0 ? ((goodMatches / totalRecords) * 100).toFixed(2) : '0.00';
-
-    // Generate reports in the format expected by the frontend
-    const reports = generateReports(geocodedResults, matchSummary, totalRecords);
-
-    // Clean up uploaded file
-    fs.unlinkSync(req.file.path);
-
-    res.json({
-      success: true,
-      totalRecords,
-      matchPercentage,
-      reports,
-      summary: matchSummary
-    });
-
-  } catch (error) {
-    console.error('Geocoding process error:', error);
-    
-    // Clean up uploaded file if it exists
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-
-    res.status(500).json({ 
-      error: 'Internal server error', 
-      details: error.message 
-    });
-  }
-});
 
 // Function to generate reports in the expected format
 function generateReports(geocodedResults, matchSummary, totalRecords) {
@@ -363,28 +226,139 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
   return reports;
 }
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', timestamp: new Date().toISOString() });
-});
-
-// Error handling middleware
-app.use((error, req, res, next) => {
-  if (error instanceof multer.MulterError) {
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ error: 'File too large. Maximum size is 10MB.' });
-    }
+// Middleware to handle CORS
+function corsMiddleware(req, res, next) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
   }
   
-  console.error('Unhandled error:', error);
-  res.status(500).json({ error: 'Internal server error' });
-});
-
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Geocoding API server running on port ${PORT}`);
-  });
+  next();
 }
 
-module.exports = app;
+// Main handler function
+export default async function handler(req, res) {
+  corsMiddleware(req, res, () => {});
+  
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  try {
+    // Use multer to parse the multipart form data
+    await new Promise((resolve, reject) => {
+      upload.single('file')(req, res, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Parse CSV from buffer
+    const csvData = req.file.buffer.toString('utf8');
+    const parseResult = Papa.parse(csvData, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (header) => header.trim()
+    });
+
+    if (parseResult.errors.length > 0) {
+      return res.status(400).json({ 
+        error: 'CSV parsing error', 
+        details: parseResult.errors 
+      });
+    }
+
+    const records = parseResult.data;
+    const geocodedResults = [];
+    const matchSummary = {
+      '0': 0, '1': 0, '2': 0, '3': 0, '4': 0,
+      '5': 0, '6': 0, '7': 0, '8': 0, '9': 0
+    };
+
+    console.log(`Processing ${records.length} records...`);
+
+    // Process each record
+    for (let i = 0; i < records.length; i++) {
+      const record = records[i];
+      
+      // Extract address from common CSV column names
+      const address = record.Address || record.address || record['Source Address'] || 
+                     record['Street Address'] || record.ADDRESS || '';
+      
+      const policyNumber = record['Policy #'] || record['Policy Number'] || record.Policy || 
+                          record.POLICY || `POL-${i + 1}`;
+      
+      const premiums = record.Premiums || record.Premium || record.PREMIUMS || 
+                      record['Premium Amount'] || '0.00';
+
+      if (!address) {
+        console.log(`Skipping record ${i + 1}: No address found`);
+        continue;
+      }
+
+      console.log(`Geocoding ${i + 1}/${records.length}: ${address}`);
+
+      // Geocode the address
+      const geocodeResult = await geocodeAddress(address);
+      
+      // Determine jurisdiction
+      const jurisdiction = determineJurisdiction(geocodeResult.coordinates, address);
+
+      // Create result record
+      const result = {
+        policyNumber,
+        sourceAddress: address,
+        matchCode: geocodeResult.matchCode,
+        matchDescription: geocodeResult.matchDescription,
+        matchedAddress: geocodeResult.matchedAddress || address,
+        jurisdiction: jurisdiction.name,
+        jurisdictionCode: jurisdiction.code,
+        premiums: premiums,
+        coordinates: geocodeResult.coordinates,
+        originalRecord: record
+      };
+
+      geocodedResults.push(result);
+      matchSummary[geocodeResult.matchCode]++;
+
+      // Add delay between API calls as requested
+      if (i < records.length - 1) {
+        await delay(200); // 200ms delay
+      }
+    }
+
+    // Calculate match percentage
+    const totalRecords = geocodedResults.length;
+    const goodMatches = matchSummary['0'];
+    const matchPercentage = totalRecords > 0 ? ((goodMatches / totalRecords) * 100).toFixed(2) : '0.00';
+
+    // Generate reports in the format expected by the frontend
+    const reports = generateReports(geocodedResults, matchSummary, totalRecords);
+
+    res.json({
+      success: true,
+      totalRecords,
+      matchPercentage,
+      reports,
+      summary: matchSummary
+    });
+
+  } catch (error) {
+    console.error('Geocoding process error:', error);
+    res.status(500).json({ 
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
+}

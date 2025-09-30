@@ -1,0 +1,9 @@
+{
+  "name": "allocator-dashboard-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "multer": "^2.0.2",
+    "papaparse": "^5.5.3"
+  }
+}
