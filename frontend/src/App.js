@@ -406,6 +406,7 @@ const App = () => {
 
             if (response.ok) {
                 const result = await response.json();
+                console.log('API Response:', result);
                 
                 // Create new job with geocoded results
                 const newJobId = `job-${Date.now()}`;
@@ -415,12 +416,18 @@ const App = () => {
                     details: `(${Object.keys(jobs).length + 1})${file.name.substring(0, 20)}...`,
                     match: `${result.matchPercentage}%`,
                     status: "Under Review",
-                    reports: result.reports
+                    reports: result.reports || {}
                 };
 
-                setJobs(prev => ({ ...prev, [newJobId]: newJob }));
+                console.log('Creating new job:', newJob);
+                setJobs(prev => {
+                    const updated = { ...prev, [newJobId]: newJob };
+                    console.log('Updated jobs:', updated);
+                    return updated;
+                });
                 setActiveJobId(newJobId);
                 setActiveTab("Job Summary");
+                console.log('Set active job to:', newJobId);
             } else {
                 console.error('Upload failed:', response.status, response.statusText);
                 const errorText = await response.text();
@@ -694,7 +701,7 @@ const App = () => {
                 
                 <div style={{ flex: 1, padding: '24px', overflow: 'auto' }}>
                     { activeJob ? (
-                    <div style={{ backgroundColor: COLORS.contentPanelBg, borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <div style={{ backgroundColor: COLORS.contentPanelBg, borderRadius: '6px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%', minHeight: '600px' }}>
                         {/* Controls */}
                         <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${COLORS.mainBg}`}}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -714,12 +721,12 @@ const App = () => {
                         </div>
 
                         {/* Table */}
-                        <div style={{ overflow: 'auto', flexGrow: 1 }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', color: COLORS.textDark }}>
+                        <div style={{ overflow: 'auto', flexGrow: 1, minHeight: '400px', maxHeight: '600px' }}>
+                            <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', color: COLORS.textDark, tableLayout: 'auto' }}>
                                 <thead style={{ backgroundColor: COLORS.tableHeaderBg, position: 'sticky', top: 0, zIndex: 1 }}>
                                     <tr>
                                         {currentReportData.headers.map((header, idx) => (
-                                        <th key={idx} onClick={() => handleSort(header)} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none', borderBottom: '2px solid #dee2e6' }}>
+                                        <th key={idx} onClick={() => handleSort(header)} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#495057', textTransform: 'uppercase', letterSpacing: '0.05em', cursor: 'pointer', userSelect: 'none', borderBottom: '2px solid #dee2e6', minWidth: '120px', whiteSpace: 'nowrap' }}>
                                             {header} {sortColumn === header && (sortDirection === 'asc' ? '↑' : '↓')}
                                         </th>
                                         ))}
