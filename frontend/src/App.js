@@ -783,13 +783,7 @@ const App = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {premiumsTotal && (
-                                         <tr style={{backgroundColor: COLORS.tableHeaderBg}}>
-                                            <td style={{ padding: '10px 16px', fontWeight: '600'}}>Total of Detail Report</td>
-                                            <td style={{ padding: '10px 16px', fontWeight: '600'}}>{premiumsTotal}</td>
-                                            <td colSpan={currentReportData.headers.length - 2}></td>
-                                        </tr>
-                                    )}
+
                                     {paginatedData.map((row, rowIdx) => (
                                     <tr key={rowIdx} onClick={() => setSelectedRow(rowIdx)} style={{ borderBottom: `1px solid ${COLORS.mainBg}`, backgroundColor: selectedRow === rowIdx ? '#e9ecef' : 'transparent', cursor: 'pointer' }}>
                                         {row.map((cell, cellIdx) => {
