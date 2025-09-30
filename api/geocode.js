@@ -1,21 +1,14 @@
-const multer = require('multer');
-const Papa = require('papaparse');
-const axios = require('axios');
+import { IncomingForm } from 'formidable';
+import Papa from 'papaparse';
+import axios from 'axios';
+import fs from 'fs';
 
-// Configure multer for serverless environment
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit
+// Disable body parser for file uploads
+export const config = {
+  api: {
+    bodyParser: false,
   },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only CSV files are allowed'), false);
-    }
-  }
-});
+};
 
 // Geocoding function using Census Bureau API
 async function geocodeAddress(address) {
@@ -226,8 +219,9 @@ function generateReports(geocodedResults, matchSummary, totalRecords) {
   return reports;
 }
 
-// Middleware to handle CORS
-function corsMiddleware(req, res, next) {
+// Main handler function
+export default async function handler(req, res) {
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -237,35 +231,29 @@ function corsMiddleware(req, res, next) {
     return;
   }
   
-  next();
-}
-
-// Main handler function
-export default async function handler(req, res) {
-  corsMiddleware(req, res, () => {});
-  
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Use multer to parse the multipart form data
-    await new Promise((resolve, reject) => {
-      upload.single('file')(req, res, (err) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
-
-    if (!req.file) {
+    // Parse the multipart form data
+    const form = new IncomingForm();
+    form.maxFileSize = 10 * 1024 * 1024; // 10MB limit
+    
+    const [fields, files] = await form.parse(req);
+    
+    const file = files.file?.[0];
+    if (!file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Parse CSV from buffer
-    const csvData = req.file.buffer.toString('utf8');
+    // Check file type
+    if (!file.originalFilename?.endsWith('.csv') && file.mimetype !== 'text/csv') {
+      return res.status(400).json({ error: 'Only CSV files are allowed' });
+    }
+
+    // Read and parse CSV file
+    const csvData = fs.readFileSync(file.filepath, 'utf8');
     const parseResult = Papa.parse(csvData, {
       header: true,
       skipEmptyLines: true,
@@ -345,6 +333,13 @@ export default async function handler(req, res) {
 
     // Generate reports in the format expected by the frontend
     const reports = generateReports(geocodedResults, matchSummary, totalRecords);
+
+    // Clean up temporary file
+    try {
+      fs.unlinkSync(file.filepath);
+    } catch (err) {
+      console.warn('Could not delete temporary file:', err.message);
+    }
 
     res.json({
       success: true,
